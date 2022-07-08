@@ -18,14 +18,12 @@ package monitor
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/edwarnicke/serialize"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/sirupsen/logrus"
-	"github.com/spiffe/go-spiffe/v2/workloadapi"
+
 )
 
 type monitorConnectionServer struct {
@@ -47,36 +45,6 @@ func newMonitorConnectionServer(chainCtx context.Context) networkservice.Monitor
 func (m *monitorConnectionServer) MonitorConnections(selector *networkservice.MonitorScopeSelector, srv networkservice.MonitorConnection_MonitorConnectionsServer) error {
 	logrus.Info("NS MonitorConnectionServer MonitorConnections")
 
-	logrus.Infof("To check that spiffe is can be received")
-
-	ctx := srv.Context()
-	var decodedClaims jwt.RegisteredClaims
-	for _, seg := range selector.GetPathSegments(){
-		logrus.Printf("Conn next path token  %v \n", seg.Token)
-		tokenDecoded, err := jwt.ParseWithClaims(
-			seg.Token, &jwt.RegisteredClaims{},
-			func(token *jwt.Token) (interface{}, error) {return []byte("AllYourBase"), nil},
-		)
-		if err != nil {
-			return fmt.Errorf("error decoding connection token: %+v", err)
-		}
-		logrus.Infof("decoded Token %v \n", tokenDecoded)
-		decodedClaims = tokenDecoded.Claims.(jwt.RegisteredClaims)
-		logrus.Infof("decoded Claims %v \n", decodedClaims)
-		logrus.Infof("Subject from the Claims %v", decodedClaims.Subject)
-		logrus.Infof("Audienct from the Claims %v", decodedClaims.Audience)
-
-	}
-	source, err := workloadapi.NewX509Source(ctx)
-	if err != nil {
-		return fmt.Errorf("error getting x509 source: %+v", err)
-	}
-	svid, err := source.GetX509SVID()
-	if err != nil {
-		return fmt.Errorf("error getting x509 svid: %+v", err)
-	}
-	logrus.Infof("Service Own Spiffe ID %v", svid.ID)
-	//
 	m.executor.AsyncExec(func() {
 		filter := newMonitorFilter(selector, srv)
 		m.filters[uuid.New().String()] = filter

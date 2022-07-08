@@ -22,12 +22,18 @@ package monitor
 
 import (
 	"context"
+	"crypto/x509"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/spiffe/go-spiffe/v2/spiffeid"
+	"github.com/spiffe/go-spiffe/v2/svid/x509svid"
+	"google.golang.org/grpc/peer"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clientconn"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
+	"github.com/networkservicemesh/sdk/pkg/tools/opa"
 	"github.com/networkservicemesh/sdk/pkg/tools/postpone"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
@@ -38,6 +44,8 @@ import (
 type monitorServer struct {
 	chainCtx context.Context
 	networkservice.MonitorConnectionServer
+	spiffeIdConnectionMap map[string]*networkservice.Connection
+
 }
 
 // NewServer - creates a NetworkServiceServer chain element that will properly update a MonitorConnectionServer
@@ -54,6 +62,7 @@ func NewServer(chainCtx context.Context, monitorServerPtr *networkservice.Monito
 	return &monitorServer{
 		chainCtx:                chainCtx,
 		MonitorConnectionServer: *monitorServerPtr,
+		spiffeIdConnectionMap: make(map[string]*networkservice.Connection),
 	}
 }
 
@@ -86,6 +95,18 @@ func (m *monitorServer) Request(ctx context.Context, request *networkservice.Net
 		}
 		store(ctx, metadata.IsClient(m), cancelEventLoop)
 	}
+	p, ok := peer.FromContext(ctx)
+	var cert *x509.Certificate
+	if ok {
+		cert = opa.ParseX509Cert(p.AuthInfo)
+	}
+	var spiffeID spiffeid.ID
+	if cert != nil {
+		spiffeID, err := x509svid.IDFromCert(cert); if err == nil {
+			logrus.Infof("Monitor Server Request Spiffe ID :%v", spiffeID.String())
+		}
+	}
+	m.spiffeIdConnectionMap[spiffeID.String()] = conn
 
 	return conn, nil
 }
@@ -100,5 +121,18 @@ func (m *monitorServer) Close(ctx context.Context, conn *networkservice.Connecti
 		Type:        networkservice.ConnectionEventType_DELETE,
 		Connections: map[string]*networkservice.Connection{conn.GetId(): conn.Clone()},
 	})
+
+	p, ok := peer.FromContext(ctx)
+	var cert *x509.Certificate
+	if ok {
+		cert = opa.ParseX509Cert(p.AuthInfo)
+	}
+	var spiffeID spiffeid.ID
+	if cert != nil {
+		spiffeID, err := x509svid.IDFromCert(cert); if err == nil {
+			logrus.Infof("Monitor Server Close Spiffe ID :%v", spiffeID.String())
+		}
+	}
+	m.spiffeIdConnectionMap[spiffeID.String()] = conn
 	return rv, err
 }

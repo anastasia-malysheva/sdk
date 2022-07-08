@@ -40,13 +40,13 @@ func PreparedOpaInput(ctx context.Context, model interface{}) (map[string]interf
 	p, ok := peer.FromContext(ctx)
 	var cert *x509.Certificate
 	if ok {
-		cert = parseX509Cert(p.AuthInfo)
+		cert = ParseX509Cert(p.AuthInfo)
 	}
 	var pemcert string
 	var spiffeID spiffeid.ID
 	if cert != nil {
 		pemcert = pemEncodingX509Cert(cert)
-		spiffeID, err := x509svid.IDFromCert(cert); if err == nil {
+		spiffeID, err = x509svid.IDFromCert(cert); if err == nil {
 			logrus.Infof("PreparedOpaInput Spiffe ID :%v", spiffeID.String())
 		}
 	}
@@ -62,7 +62,7 @@ func pemEncodingX509Cert(cert *x509.Certificate) string {
 	return string(certpem)
 }
 
-func parseX509Cert(authInfo credentials.AuthInfo) *x509.Certificate {
+func ParseX509Cert(authInfo credentials.AuthInfo) *x509.Certificate {
 	var peerCert *x509.Certificate
 
 	switch v := authInfo.(type) {
