@@ -18,6 +18,7 @@ package monitor
 
 import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/sirupsen/logrus"
 )
 
 type clientFilter struct {
@@ -26,6 +27,7 @@ type clientFilter struct {
 }
 
 func newClientFilter(client networkservice.MonitorConnection_MonitorConnectionsClient, conn *networkservice.Connection) networkservice.MonitorConnection_MonitorConnectionsClient {
+	logrus.Infof("Monitor Client Filter")
 	return &clientFilter{
 		MonitorConnection_MonitorConnectionsClient: client,
 		conn: conn,

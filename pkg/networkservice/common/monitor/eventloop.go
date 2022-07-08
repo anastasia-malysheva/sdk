@@ -21,6 +21,7 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
@@ -32,6 +33,8 @@ type eventLoop struct {
 }
 
 func newEventLoop(ctx context.Context, ec eventConsumer, cc grpc.ClientConnInterface, conn *networkservice.Connection) (context.CancelFunc, error) {
+	logrus.Infof("Monitor Eventloop")
+
 	conn = conn.Clone()
 	// Is another chain element asking for events?  If not, no need to monitor
 	if ec == nil {
