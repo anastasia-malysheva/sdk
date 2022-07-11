@@ -18,6 +18,9 @@ package adapters
 
 import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/networkservicemesh/sdk/pkg/tools/monitor/authorize"
+	"github.com/networkservicemesh/sdk/pkg/tools/monitor/next"
+	"github.com/sirupsen/logrus"
 )
 
 type monitorClientToServer struct {
@@ -27,9 +30,12 @@ type monitorClientToServer struct {
 // NewMonitorClientToServer - returns a MonitorConnectionServer that is wrapped around the provided MonitorConnectionClient
 //                            events that are received by the MonitorConnectionClient are sent to the MonitorConnectionServer
 func NewMonitorClientToServer(client networkservice.MonitorConnectionClient) networkservice.MonitorConnectionServer {
-	return &monitorClientToServer{
+	logrus.Info("Monitor Client to  Server")
+
+	srv := &monitorClientToServer{
 		client: client,
 	}
+	return next.NewMonitorConnectionServer(authorize.NewMonitorConnectionsServer(), srv)
 }
 
 func (m monitorClientToServer) MonitorConnections(selector *networkservice.MonitorScopeSelector, srv networkservice.MonitorConnection_MonitorConnectionsServer) error {

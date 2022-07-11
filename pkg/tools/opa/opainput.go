@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spiffe/go-spiffe/v2/spiffeid"
@@ -46,7 +47,8 @@ func PreparedOpaInput(ctx context.Context, model interface{}) (map[string]interf
 	var spiffeID spiffeid.ID
 	if cert != nil {
 		pemcert = pemEncodingX509Cert(cert)
-		spiffeID, err = x509svid.IDFromCert(cert); if err == nil {
+		spiffeID, err = x509svid.IDFromCert(cert)
+		if err == nil {
 			logrus.Infof("PreparedOpaInput Spiffe ID :%v", spiffeID.String())
 		}
 	}

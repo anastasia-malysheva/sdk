@@ -24,6 +24,8 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/sirupsen/logrus"
 
+	"github.com/networkservicemesh/sdk/pkg/tools/monitor/authorize"
+	"github.com/networkservicemesh/sdk/pkg/tools/monitor/next"
 )
 
 type monitorConnectionServer struct {
@@ -35,11 +37,12 @@ type monitorConnectionServer struct {
 
 func newMonitorConnectionServer(chainCtx context.Context) networkservice.MonitorConnectionServer {
 	logrus.Info("NS MonitorConnectionServer")
-	return &monitorConnectionServer{
+	srv := &monitorConnectionServer{
 		chainCtx:    chainCtx,
 		connections: make(map[string]*networkservice.Connection),
 		filters:     make(map[string]*monitorFilter),
 	}
+	return next.NewMonitorConnectionServer(authorize.NewMonitorConnectionsServer(), srv)
 }
 
 func (m *monitorConnectionServer) MonitorConnections(selector *networkservice.MonitorScopeSelector, srv networkservice.MonitorConnection_MonitorConnectionsServer) error {
