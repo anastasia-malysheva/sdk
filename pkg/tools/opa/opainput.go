@@ -24,8 +24,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/spiffe/go-spiffe/v2/spiffeid"
-	"github.com/spiffe/go-spiffe/v2/svid/x509svid"
 
 	"google.golang.org/grpc/peer"
 
@@ -44,18 +42,13 @@ func PreparedOpaInput(ctx context.Context, model interface{}) (map[string]interf
 		cert = ParseX509Cert(p.AuthInfo)
 	}
 	var pemcert string
-	var spiffeID spiffeid.ID
 	if cert != nil {
 		pemcert = pemEncodingX509Cert(cert)
-		spiffeID, err = x509svid.IDFromCert(cert)
-		if err == nil {
-			logrus.Infof("PreparedOpaInput Spiffe ID :%v", spiffeID.String())
-		}
 	}
 	result["auth_info"] = map[string]interface{}{
 		"certificate": pemcert,
-		"ownSpiffeId": spiffeID,
 	}
+	logrus.Infof("Input %v", result)
 	return result, nil
 }
 

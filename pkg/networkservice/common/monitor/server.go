@@ -24,10 +24,10 @@ import (
 	"context"
 	"crypto/x509"
 
+	"github.com/edwarnicke/serialize"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/spiffe/go-spiffe/v2/spiffeid"
 	"github.com/spiffe/go-spiffe/v2/svid/x509svid"
 	"google.golang.org/grpc/peer"
 
@@ -39,13 +39,18 @@ import (
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/next"
+
+	authMonitor "github.com/networkservicemesh/sdk/pkg/tools/monitor/authorize"
+	nextMonitor "github.com/networkservicemesh/sdk/pkg/tools/monitor/next"
 )
 
 type monitorServer struct {
-	chainCtx context.Context
+	chainCtx              context.Context
+	spiffeIDConnectionMap authMonitor.SpiffeIDConnectionMap
+	filters               map[string]*monitorFilter
+	executor              *serialize.Executor
+	connections           map[string]*networkservice.Connection
 	networkservice.MonitorConnectionServer
-	spiffeIdConnectionMap map[string]*networkservice.Connection
-
 }
 
 // NewServer - creates a NetworkServiceServer chain element that will properly update a MonitorConnectionServer
@@ -58,15 +63,27 @@ type monitorServer struct {
 //                        networkservice.MonitorConnectionServer chain
 //             chainCtx - context for lifecycle management
 func NewServer(chainCtx context.Context, monitorServerPtr *networkservice.MonitorConnectionServer) networkservice.NetworkServiceServer {
-	*monitorServerPtr = newMonitorConnectionServer(chainCtx)
+	spiffeIDConnectionMap := authMonitor.SpiffeIDConnectionMap{}
+	filters := make(map[string]*monitorFilter)
+	executor := serialize.Executor{}
+	connections := make(map[string]*networkservice.Connection)
+
+	*monitorServerPtr = nextMonitor.NewMonitorConnectionServer(
+		authMonitor.NewMonitorConnectionServer(&spiffeIDConnectionMap),
+		newMonitorConnectionServer(chainCtx, &executor, filters, connections),
+	)
 	return &monitorServer{
 		chainCtx:                chainCtx,
 		MonitorConnectionServer: *monitorServerPtr,
-		spiffeIdConnectionMap: make(map[string]*networkservice.Connection),
+		spiffeIDConnectionMap:   spiffeIDConnectionMap,
+		filters:                 filters,
+		executor:                &executor,
+		connections:             connections,
 	}
 }
 
 func (m *monitorServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
+	logrus.Info("Monitor Request")
 	closeCtxFunc := postpone.ContextWithValues(ctx)
 	// Cancel any existing eventLoop
 	if cancelEventLoop, loaded := loadAndDelete(ctx, metadata.IsClient(m)); loaded {
@@ -77,7 +94,14 @@ func (m *monitorServer) Request(ctx context.Context, request *networkservice.Net
 	if err != nil {
 		return nil, err
 	}
-	_ = m.MonitorConnectionServer.(eventConsumer).Send(&networkservice.ConnectionEvent{
+	spiffeID, err := getSpiffeId(ctx)
+	if err == nil {
+		// eventFactoryClient, _ := b.LoadOrStore(request.GetConnection().GetId(),
+		ids, _ := m.spiffeIDConnectionMap.Load(spiffeID)
+		updatedIds := append(ids, conn.GetId())
+		m.spiffeIDConnectionMap.LoadOrStore(spiffeID, updatedIds)
+	}
+	_ = m.Send(&networkservice.ConnectionEvent{
 		Type:        networkservice.ConnectionEventType_UPDATE,
 		Connections: map[string]*networkservice.Connection{conn.GetId(): conn.Clone()},
 	})
@@ -86,7 +110,7 @@ func (m *monitorServer) Request(ctx context.Context, request *networkservice.Net
 	// events through from, so start an eventLoop
 	cc, ccLoaded := clientconn.Load(ctx)
 	if ccLoaded {
-		cancelEventLoop, eventLoopErr := newEventLoop(m.chainCtx, m.MonitorConnectionServer.(eventConsumer), cc, conn)
+		cancelEventLoop, eventLoopErr := newEventLoop(m.chainCtx, m, cc, conn)
 		if eventLoopErr != nil {
 			closeCtx, closeCancel := closeCtxFunc()
 			defer closeCancel()
@@ -95,18 +119,6 @@ func (m *monitorServer) Request(ctx context.Context, request *networkservice.Net
 		}
 		store(ctx, metadata.IsClient(m), cancelEventLoop)
 	}
-	p, ok := peer.FromContext(ctx)
-	var cert *x509.Certificate
-	if ok {
-		cert = opa.ParseX509Cert(p.AuthInfo)
-	}
-	var spiffeID spiffeid.ID
-	if cert != nil {
-		spiffeID, err := x509svid.IDFromCert(cert); if err == nil {
-			logrus.Infof("Monitor Server Request Spiffe ID :%v", spiffeID.String())
-		}
-	}
-	m.spiffeIdConnectionMap[spiffeID.String()] = conn
 
 	return conn, nil
 }
@@ -116,23 +128,73 @@ func (m *monitorServer) Close(ctx context.Context, conn *networkservice.Connecti
 	if cancelEventLoop, loaded := loadAndDelete(ctx, metadata.IsClient(m)); loaded {
 		cancelEventLoop()
 	}
+	spiffeID, err := getSpiffeId(ctx)
+	if err == nil {
+		ids, _ := m.spiffeIDConnectionMap.Load(spiffeID)
+		updatedIds := append(ids, conn.GetId())
+		m.spiffeIDConnectionMap.LoadOrStore(spiffeID, updatedIds)
+	}
+
 	rv, err := next.Server(ctx).Close(ctx, conn)
-	_ = m.MonitorConnectionServer.(eventConsumer).Send(&networkservice.ConnectionEvent{
+	_ = m.Send(&networkservice.ConnectionEvent{
 		Type:        networkservice.ConnectionEventType_DELETE,
 		Connections: map[string]*networkservice.Connection{conn.GetId(): conn.Clone()},
 	})
 
+	return rv, err
+}
+
+func (m *monitorServer) Send(event *networkservice.ConnectionEvent) (_ error) {
+	m.executor.AsyncExec(func() {
+		if event.Type == networkservice.ConnectionEventType_UPDATE {
+			for _, conn := range event.GetConnections() {
+				m.connections[conn.GetId()] = conn.Clone()
+			}
+		}
+		if event.Type == networkservice.ConnectionEventType_DELETE {
+			for _, conn := range event.GetConnections() {
+				delete(m.connections, conn.GetId())
+			}
+		}
+		if event.Type == networkservice.ConnectionEventType_INITIAL_STATE_TRANSFER {
+			// sending event with INIITIAL_STATE_TRANSFER not permitted
+			return
+		}
+		for id, filter := range m.filters {
+			id, filter := id, filter
+			e := event.Clone()
+			filter.executor.AsyncExec(func() {
+				var err error
+				select {
+				case <-filter.Context().Done():
+					m.executor.AsyncExec(func() {
+						delete(m.filters, id)
+					})
+				default:
+					err = filter.Send(e)
+				}
+				if err != nil {
+					m.executor.AsyncExec(func() {
+						delete(m.filters, id)
+					})
+				}
+			})
+		}
+	})
+	return nil
+}
+
+func getSpiffeId(ctx context.Context) (string, error) {
 	p, ok := peer.FromContext(ctx)
 	var cert *x509.Certificate
 	if ok {
+		logrus.Info("Peer from ctx is fine, parse authInfo")
 		cert = opa.ParseX509Cert(p.AuthInfo)
 	}
-	var spiffeID spiffeid.ID
-	if cert != nil {
-		spiffeID, err := x509svid.IDFromCert(cert); if err == nil {
-			logrus.Infof("Monitor Server Close Spiffe ID :%v", spiffeID.String())
-		}
+	spiffeID, err := x509svid.IDFromCert(cert)
+	if err == nil {
+		logrus.Infof("Monitor Server Request Spiffe ID :%v", spiffeID.String())
+		return spiffeID.String(), nil
 	}
-	m.spiffeIdConnectionMap[spiffeID.String()] = conn
-	return rv, err
+	return "", err
 }

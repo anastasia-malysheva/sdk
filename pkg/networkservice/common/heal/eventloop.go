@@ -25,12 +25,10 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/begin"
 	"github.com/networkservicemesh/sdk/pkg/tools/log"
-	"github.com/networkservicemesh/sdk/pkg/tools/monitor/authorize"
 	"github.com/networkservicemesh/sdk/pkg/tools/monitor/next"
 )
 
@@ -65,9 +63,8 @@ func newEventLoop(ctx context.Context, cc grpc.ClientConnInterface, conn *networ
 			},
 		},
 	}
-	logrus.Info("heal eventloop MonitorConnectionClient")
 
-	mClient := next.NewMonitorConnectionClient(authorize.NewMonitorConnectionsClient(), networkservice.NewMonitorConnectionClient(cc))
+	mClient := next.NewMonitorConnectionClient(networkservice.NewMonitorConnectionClient(cc))
 	client, err := mClient.MonitorConnections(eventLoopCtx, selector)
 	if err != nil {
 		eventLoopCancel()

@@ -70,7 +70,7 @@ func (a *authorizeMonitorConnectionsClient) MonitorConnections(ctx context.Conte
 			func(token *jwt.Token) (interface{}, error) {return []byte("AllYourBase"), nil},
 		)
 		if err != nil {
-			return nil, fmt.Errorf("error decoding connection token: %+v", err) 
+			return nil, fmt.Errorf("error decoding connection token: %+v", err)
 		}
 		logrus.Infof("decoded Token %v \n", tokenDecoded)
 		decodedClaims := tokenDecoded.Claims.(jwt.RegisteredClaims)
@@ -78,14 +78,14 @@ func (a *authorizeMonitorConnectionsClient) MonitorConnections(ctx context.Conte
 		logrus.Infof("Subject from the Claims %v", decodedClaims.Subject)
 		logrus.Infof("Audienct from the Claims %v", decodedClaims.Audience)
 	}
-	
+
 	source, err := workloadapi.NewX509Source(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error getting x509 source: %+v", err) 
+		return nil, fmt.Errorf("error getting x509 source: %+v", err)
 	}
 	svid, err := source.GetX509SVID()
 	if err != nil {
-		return nil, fmt.Errorf("error getting x509 svid: %+v", err) 
+		return nil, fmt.Errorf("error getting x509 svid: %+v", err)
 	}
 	logrus.Infof("Service Own Spiffe ID %v", svid.ID)
 

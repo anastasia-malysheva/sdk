@@ -23,12 +23,9 @@ import (
 	"runtime"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/eventchannel"
-	"github.com/networkservicemesh/sdk/pkg/tools/monitor/authorize"
-	"github.com/networkservicemesh/sdk/pkg/tools/monitor/next"
 )
 
 type monitorServerToClient struct {
@@ -38,9 +35,7 @@ type monitorServerToClient struct {
 // NewMonitorServerToClient - returns a MonitorConnectionClient that is a wrapper around the MonitorConnectionServer
 //                            events sent to the MonitorConnectionServer are received byt the MonitorConnectionClient
 func NewMonitorServerToClient(server networkservice.MonitorConnectionServer) networkservice.MonitorConnectionClient {
-	logrus.Info("Monitor Server to client")
-	client := &monitorServerToClient{server: server}
-	return next.NewMonitorConnectionClient(authorize.NewMonitorConnectionsClient(), client)
+	return &monitorServerToClient{server: server}
 }
 
 func (m *monitorServerToClient) MonitorConnections(ctx context.Context, selector *networkservice.MonitorScopeSelector, _ ...grpc.CallOption) (networkservice.MonitorConnection_MonitorConnectionsClient, error) {

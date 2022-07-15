@@ -22,32 +22,33 @@ import (
 	"github.com/edwarnicke/serialize"
 	"github.com/google/uuid"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/sirupsen/logrus"
-
-	"github.com/networkservicemesh/sdk/pkg/tools/monitor/authorize"
 	"github.com/networkservicemesh/sdk/pkg/tools/monitor/next"
+	"github.com/sirupsen/logrus"
 )
 
 type monitorConnectionServer struct {
 	chainCtx    context.Context
 	connections map[string]*networkservice.Connection
 	filters     map[string]*monitorFilter
-	executor    serialize.Executor
+	executor    *serialize.Executor
 }
 
-func newMonitorConnectionServer(chainCtx context.Context) networkservice.MonitorConnectionServer {
+func newMonitorConnectionServer(chainCtx context.Context, executor *serialize.Executor,
+	filters map[string]*monitorFilter, connections map[string]*networkservice.Connection) networkservice.MonitorConnectionServer {
 	logrus.Info("NS MonitorConnectionServer")
-	srv := &monitorConnectionServer{
+	return &monitorConnectionServer{
 		chainCtx:    chainCtx,
-		connections: make(map[string]*networkservice.Connection),
-		filters:     make(map[string]*monitorFilter),
+		connections: connections,
+		filters:     filters,
+		executor:    executor,
 	}
-	return next.NewMonitorConnectionServer(authorize.NewMonitorConnectionsServer(), srv)
 }
 
 func (m *monitorConnectionServer) MonitorConnections(selector *networkservice.MonitorScopeSelector, srv networkservice.MonitorConnection_MonitorConnectionsServer) error {
 	logrus.Info("NS MonitorConnectionServer MonitorConnections")
-
+	if err := next.MonitorConnectionServer(srv.Context()).MonitorConnections(selector, srv); err != nil {
+		return err
+	}
 	m.executor.AsyncExec(func() {
 		filter := newMonitorFilter(selector, srv)
 		m.filters[uuid.New().String()] = filter
@@ -71,50 +72,6 @@ func (m *monitorConnectionServer) MonitorConnections(selector *networkservice.Mo
 	return nil
 }
 
-var _ networkservice.MonitorConnectionServer = &monitorConnectionServer{}
-
-func (m *monitorConnectionServer) Send(event *networkservice.ConnectionEvent) (_ error) {
-	m.executor.AsyncExec(func() {
-		if event.Type == networkservice.ConnectionEventType_UPDATE {
-			for _, conn := range event.GetConnections() {
-				m.connections[conn.GetId()] = conn.Clone()
-			}
-		}
-		if event.Type == networkservice.ConnectionEventType_DELETE {
-			for _, conn := range event.GetConnections() {
-				delete(m.connections, conn.GetId())
-			}
-		}
-		if event.Type == networkservice.ConnectionEventType_INITIAL_STATE_TRANSFER {
-			// sending event with INIITIAL_STATE_TRANSFER not permitted
-			return
-		}
-		for id, filter := range m.filters {
-			id, filter := id, filter
-			e := event.Clone()
-			filter.executor.AsyncExec(func() {
-				var err error
-				select {
-				case <-filter.Context().Done():
-					m.executor.AsyncExec(func() {
-						delete(m.filters, id)
-					})
-				default:
-					err = filter.Send(e)
-				}
-				if err != nil {
-					m.executor.AsyncExec(func() {
-						delete(m.filters, id)
-					})
-				}
-			})
-		}
-	})
-	return nil
-}
-
 type eventConsumer interface {
 	Send(event *networkservice.ConnectionEvent) (err error)
 }
-
-var _ eventConsumer = &monitorConnectionServer{}

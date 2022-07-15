@@ -26,10 +26,10 @@ import (
 	"sync"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
-	"github.com/networkservicemesh/sdk/pkg/tools/monitor/authorize"
-	"github.com/networkservicemesh/sdk/pkg/tools/monitor/next"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+
+	"github.com/networkservicemesh/sdk/pkg/tools/monitor/next"
 
 	"github.com/edwarnicke/serialize"
 )
@@ -48,9 +48,7 @@ type monitorConnectionClient struct {
 //                              Note: Does not perform filtering basedon MonitorScopeSelector
 func NewMonitorConnectionClient(eventCh <-chan *networkservice.ConnectionEvent) networkservice.MonitorConnectionClient {
 	logrus.Info("Event Channel MonitorConnectionClient")
-	srv := &monitorConnectionClient{eventCh: eventCh}
-	return next.NewMonitorConnectionClient(
-		authorize.NewMonitorConnectionsClient(), srv)
+	return next.NewMonitorConnectionClient(&monitorConnectionClient{eventCh: eventCh})
 }
 
 func (m *monitorConnectionClient) MonitorConnections(ctx context.Context, _ *networkservice.MonitorScopeSelector, _ ...grpc.CallOption) (networkservice.MonitorConnection_MonitorConnectionsClient, error) {
