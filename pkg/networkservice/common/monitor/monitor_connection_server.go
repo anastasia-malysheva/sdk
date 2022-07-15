@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2021-2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -69,3 +69,10 @@ func (m *monitorConnectionServer) MonitorConnections(selector *networkservice.Mo
 
 	return nil
 }
+
+// EventConsumer - interface for monitor events sending
+type EventConsumer interface {
+	Send(event *networkservice.ConnectionEvent) (err error)
+}
+
+var _ EventConsumer = &monitorConnectionServer{}
