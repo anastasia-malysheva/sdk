@@ -88,7 +88,7 @@ func (m *monitorServer) Request(ctx context.Context, request *networkservice.Net
 		cancelEventLoop()
 	}
 
-	storeEventConsumer(ctx, metadata.IsClient(m), m.MonitorConnectionServer.(EventConsumer))
+	storeEventConsumer(ctx, metadata.IsClient(m), m)
 
 	conn, err := next.Server(ctx).Request(ctx, request)
 	if err != nil {
