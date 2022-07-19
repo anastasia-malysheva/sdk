@@ -1,5 +1,3 @@
-// Copyright (c) 2020 Doc.ai and/or its affiliates.
-//
 // Copyright (c) 2022 Cisco and/or its affiliates.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -16,20 +14,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dnscontext
+package cache
 
-const (
-	// SearchProperty means search list for host-name lookup
-	SearchProperty = "search"
-	// NameserverProperty means name server IP address
-	NameserverProperty = "nameserver"
-	// OptionsProperty  allows certain internal resolver variables to be modified
-	OptionsProperty = "options"
-	// AnyDomain means that allowed any host-name
-	AnyDomain           = "."
-	defaultPlugin       = "fanout"
-	serverBlockTemplate = `%v {
-	%v . %v
-	%v
-}`
+import (
+	"github.com/miekg/dns"
 )
+
+type responseWriterWrapper struct {
+	dns.ResponseWriter
+	cache *msgMap
+}
+
+func (r *responseWriterWrapper) WriteMsg(m *dns.Msg) error {
+	if m != nil && m.Rcode == dns.RcodeSuccess {
+		r.cache.Store(m.Question[0].Name, m)
+	}
+	return r.ResponseWriter.WriteMsg(m)
+}

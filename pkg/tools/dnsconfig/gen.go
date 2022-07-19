@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Cisco and/or its affiliates.
+// Copyright (c) 2022 Cisco Systems, Inc.
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -14,15 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package upstreamrefresh
+// Package dnsconfig provides sync map like a Go map[string][]*DNSConfig but is safe for concurrent using
+package dnsconfig
 
-import (
-	"sync"
-)
+import "sync"
 
-type typeCh = chan struct{}
+//go:generate go-syncmap -output sync_map.gen.go -type Map<string,[]*github.com/networkservicemesh/api/pkg/api/networkservice.DNSConfig>
 
-//go:generate go-syncmap -output notifier_map.gen.go -type notifierMap<string,typeCh>
-
-// clientMap - sync.Map with key == string and value == chan struct{}
-type notifierMap sync.Map
+// Map is like a Go map[string][]*DNSConfig but is safe for concurrent use
+// by multiple goroutines without additional locking or coordination
+type Map sync.Map
