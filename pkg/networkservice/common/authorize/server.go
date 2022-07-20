@@ -87,12 +87,15 @@ func (a *authorizeServer) Request(ctx context.Context, request *networkservice.N
 		logrus.Infof("Put Spiffe id %v and conn id %v of the service in auth request", spiffeID, connID)
 		logrus.Infof("Before Spiffe Id map %v", a.spiffeIDConnectionMap)
 		ids, ok := a.spiffeIDConnectionMap.Load(spiffeID)
+		logrus.Infof("Before conn Ids %v", ids)
 		if !ok {
 			logrus.Info("Ids")
 			ids = make([]string, 0)
 		}
+		ids = append(ids, connID)
+		logrus.Infof("After conn Ids %v", ids)
 		a.spiffeIDConnectionMap.Store(
-			spiffeID, append(ids, connID))
+			spiffeID, ids)
 		logrus.Infof("After Spiffe Id map %v", a.spiffeIDConnectionMap)
 	}
 	logrus.Info("auth NS  pass policy check ")
