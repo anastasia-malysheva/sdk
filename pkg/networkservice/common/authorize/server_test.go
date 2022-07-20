@@ -104,7 +104,7 @@ func TestAuthzEndpoint(t *testing.T) {
 			denied:  true,
 		},
 	}
-	spiffeIDConnectionMap := spire.SpiffeIDConnectionMap{}
+	spiffeIDConnectionMap := spire.NestedMap{}
 	for i := range suits {
 		s := suits[i]
 		t.Run(s.name, func(t *testing.T) {

@@ -22,7 +22,7 @@ import "github.com/networkservicemesh/sdk/pkg/tools/spire"
 
 type options struct {
 	policies              policiesList
-	spiffeIDConnectionMap *spire.SpiffeIDConnectionMap
+	spiffeIDConnectionMap *spire.NestedMap
 }
 
 // Option is authorization option for network service server
@@ -41,7 +41,7 @@ func WithPolicies(p ...Policy) Option {
 }
 
 // WithSpiffeIDConnectionMap sets map to keep spiffeIDConnectionMap to authorize connections with MonitorServer
-func WithSpiffeIDConnectionMap(s *spire.SpiffeIDConnectionMap) Option {
+func WithSpiffeIDConnectionMap(s *spire.NestedMap) Option {
 	return func(o *options) {
 		o.spiffeIDConnectionMap = s
 	}

@@ -38,7 +38,7 @@ import (
 
 type authorizeServer struct {
 	policies              policiesList
-	spiffeIDConnectionMap *spire.SpiffeIDConnectionMap
+	spiffeIDConnectionMap *spire.NestedMap
 }
 
 // NewServer - returns a new authorization networkservicemesh.NetworkServiceServers
@@ -51,7 +51,7 @@ func NewServer(opts ...Option) networkservice.NetworkServiceServer {
 			opa.WithTokensExpiredPolicy(),
 			opa.WithTokenChainPolicy(),
 		},
-		spiffeIDConnectionMap: &spire.SpiffeIDConnectionMap{},
+		spiffeIDConnectionMap: &spire.NestedMap{},
 	}
 	for _, opt := range opts {
 		opt(o)
@@ -62,6 +62,7 @@ func NewServer(opts ...Option) networkservice.NetworkServiceServer {
 	}
 	return s
 }
+
 
 func (a *authorizeServer) Request(ctx context.Context, request *networkservice.NetworkServiceRequest) (*networkservice.Connection, error) {
 	conn := request.GetConnection()
@@ -89,10 +90,18 @@ func (a *authorizeServer) Request(ctx context.Context, request *networkservice.N
 		ids, ok := a.spiffeIDConnectionMap.Load(spiffeID)
 		logrus.Infof("Before conn Ids %v", ids)
 		if !ok {
-			logrus.Info("Ids")
-			ids = make([]string, 0)
+			logrus.Info("Conn Ids is empty")
+			ids = spire.ConnectionMap{}
+			ids.Store(connID, true)
+		}else {
+			logrus.Info("Conn Ids is not empty")
+			present, ok := ids.Load(connID)
+			if !present && !ok {
+				logrus.Info("Add new Conn Id")
+				ids.Store(connID, true)
+			}
 		}
-		ids = append(ids, connID)
+		
 		logrus.Infof("After conn Ids %v", ids)
 		a.spiffeIDConnectionMap.Store(
 			spiffeID, ids)
@@ -116,11 +125,11 @@ func (a *authorizeServer) Close(ctx context.Context, conn *networkservice.Connec
 			return nil, err
 		}
 	}
-	if spiffeID, err := getSpiffeID(ctx); err == nil {
-		logrus.Infof("Get Spiffe id of the service in auth close %v", spiffeID)
-		ids, _ := a.spiffeIDConnectionMap.Load(spiffeID)
-		a.spiffeIDConnectionMap.LoadOrStore(spiffeID, append(ids, conn.GetId()))
-	}
+	// if spiffeID, err := getSpiffeID(ctx); err == nil {
+	// 	logrus.Infof("Get Spiffe id of the service in auth close %v", spiffeID)
+	// 	ids, _ := a.spiffeIDConnectionMap.Load(spiffeID)
+	// 	a.spiffeIDConnectionMap.LoadOrStore(spiffeID, append(ids, conn.GetId()))
+	// }
 	logrus.Info("auth NS  pass policy check ")
 	return next.Server(ctx).Close(ctx, conn)
 }

@@ -33,7 +33,7 @@ import (
 
 type authorizeMonitorConnectionsServer struct {
 	policies              policiesList
-	spiffeIDConnectionMap *spire.SpiffeIDConnectionMap
+	spiffeIDConnectionMap *spire.NestedMap
 }
 
 // NewMonitorConnectionServer - returns a new authorization networkservicemesh.MonitorConnectionServer
@@ -41,7 +41,7 @@ func NewMonitorConnectionServer(opts ...Option) networkservice.MonitorConnection
 	logrus.Info("Create New monitor connections auth server")
 	o := &options{
 		policies:              policiesList{opa.WithServiceOwnConnectionPolicy()},
-		spiffeIDConnectionMap: &spire.SpiffeIDConnectionMap{},
+		spiffeIDConnectionMap: &spire.NestedMap{},
 	}
 	for _, opt := range opts {
 		opt(o)
@@ -75,12 +75,19 @@ func (a *authorizeMonitorConnectionsServer) MonitorConnections(in *networkservic
 	}
 	logrus.Infof("auth MonitorConnections service spiffe id %v", spiffeID.String())
 	simpleMap := make(map[string][]string)
+
 	a.spiffeIDConnectionMap.Range(
-		func(k string, v []string) bool {
-			simpleMap[k] = v
+		func(sid string, connIds spire.ConnectionMap) bool {
+			connIds.Range(
+				func(connId string, _ bool) bool {
+					simpleMap[sid] = append(simpleMap[sid], connId)
+					return true
+				},
+			)
 			return true
 		},
 	)
+
 	if len(simpleMap) == 0 {
 		logrus.Info("auth MonitorConnections spiffe id map is empty")
 	}

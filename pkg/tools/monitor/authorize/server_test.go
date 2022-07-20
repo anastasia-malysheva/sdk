@@ -175,9 +175,15 @@ func TestAuthzEndpoint(t *testing.T) {
 				baseCtx, err = getContextWithTLSCert()
 				require.NoError(t, err)
 			}
-			spiffeIDConnectionMap := spire.SpiffeIDConnectionMap{}
-			for k, v := range s.spiffeIDConnMap {
-				spiffeIDConnectionMap.Store(k, v)
+			spiffeIDConnectionMap := spire.NestedMap{}
+			
+			for spiffeID, connIds := range s.spiffeIDConnMap {
+				connIDMap := spire.ConnectionMap{}
+				for _, connID := range connIds {
+					
+					connIDMap.Store(connID, true)
+				}
+				spiffeIDConnectionMap.Store(spiffeID, connIDMap)
 			}
 			ctx, cancel := context.WithTimeout(baseCtx, time.Second)
 			defer cancel()
@@ -217,8 +223,10 @@ func TestAuthorize_ShouldCorrectlyWorkWithHeal(t *testing.T) {
 		selector, &testEmptyMCMCServer{context: ctx})
 	require.NoError(t, err)
 
-	spiffeIDConnectionMap := spire.SpiffeIDConnectionMap{}
-	spiffeIDConnectionMap.Store(spiffeID1, []string{"conn1"})
+	spiffeIDConnectionMap := spire.NestedMap{}
+	connIdMap := spire.ConnectionMap{}
+	connIdMap.Store("conn1", true)
+	spiffeIDConnectionMap.Store(spiffeID1, connIdMap)
 	err = authorize.NewMonitorConnectionServer(
 		authorize.WithSpiffeIDConnectionMap(&spiffeIDConnectionMap)).MonitorConnections(
 		selector, &testEmptyMCMCServer{context: ctx})
