@@ -24,6 +24,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/peer"
 
@@ -42,6 +43,7 @@ type authorizeClient struct {
 // NewClient - returns a new authorization networkservicemesh.NetworkServiceClient
 // Authorize client checks rigiht side of path.
 func NewClient(opts ...Option) networkservice.NetworkServiceClient {
+	logrus.Info("New authorize NS client")
 	o := &options{
 		policies: policiesList{
 			opa.WithTokensValidPolicy(),

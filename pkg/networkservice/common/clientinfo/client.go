@@ -21,6 +21,7 @@ import (
 	"context"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/clientinfo"
@@ -35,6 +36,8 @@ type clientInfo struct{}
 // NewClient - creates a new networkservice.NetworkServiceClient chain element that adds pod, node and cluster names
 // to request from corresponding environment variables
 func NewClient() networkservice.NetworkServiceClient {
+	logrus.Info("New clientinfo NS client")
+
 	return &clientInfo{}
 }
 

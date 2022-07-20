@@ -22,6 +22,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/core/chain"
@@ -33,6 +34,8 @@ type mechanismsClient struct {
 
 // NewClient - returns a new mechanisms networkservicemesh.NetworkServiceClient
 func NewClient(mechanisms map[string]networkservice.NetworkServiceClient) networkservice.NetworkServiceClient {
+	logrus.Info("New mechanisms NS client")
+
 	result := &mechanismsClient{
 		mechanisms: make(map[string]networkservice.NetworkServiceClient),
 	}

@@ -22,6 +22,7 @@ import (
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 
@@ -40,6 +41,8 @@ type healClient struct {
 
 // NewClient - returns a new heal client chain element
 func NewClient(chainCtx context.Context, opts ...Option) networkservice.NetworkServiceClient {
+	logrus.Info("New heal NS client")
+
 	o := &options{
 		livenessCheckInterval: livenessCheckInterval,
 		livenessCheckTimeout:  livenessCheckTimeout,

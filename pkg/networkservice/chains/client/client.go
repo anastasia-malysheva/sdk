@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/sirupsen/logrus"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/begin"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clientconn"
@@ -39,6 +40,7 @@ import (
 // NewClient - returns case NSM client.
 //             - ctx    - context for the lifecycle of the *Client* itself.  Cancel when discarding the client.
 func NewClient(ctx context.Context, clientOpts ...Option) networkservice.NetworkServiceClient {
+	logrus.Info("New NS client")
 	var opts = &clientOptions{
 		name:            "client-" + uuid.New().String(),
 		authorizeClient: null.NewClient(),

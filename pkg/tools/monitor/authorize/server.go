@@ -81,8 +81,8 @@ func (a *authorizeMonitorConnectionsServer) MonitorConnections(in *networkservic
 			return true
 		},
 	)
-	if len(simpleMap) > 0 {
-		logrus.Info("auth MonitorConnections spiffe id map is filled")
+	if len(simpleMap) == 0 {
+		logrus.Info("auth MonitorConnections spiffe id map is empty")
 	}
 	
 	input = MonitorOpaInput{
@@ -90,14 +90,16 @@ func (a *authorizeMonitorConnectionsServer) MonitorConnections(in *networkservic
 		SpiffeIDConnectionMap: simpleMap,
 		PathSegments:          in.PathSegments,
 	}
-	for k, v := range simpleMap{
+	logrus.Infof("SpiffeID map %v", simpleMap)
+	
+	for k, v := range simpleMap {
 		logrus.Infof("SpiffeID %v :: %v", k, v)
 	}
 	var seg []string
 	for _, v := range in.PathSegments{
 		seg = append(seg, v.GetId())
 	}
-	logrus.Infof("PathSegment %v", seg)
+	logrus.Infof("PathSegments %v", seg)
 	if err := a.policies.check(ctx, input); err != nil {
 		logrus.Infof("auth MonitorConnections service with spiffe id failed policy check %v", spiffeID.String())
 		return err

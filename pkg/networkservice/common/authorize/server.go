@@ -76,10 +76,18 @@ func (a *authorizeServer) Request(ctx context.Context, request *networkservice.N
 			return nil, err
 		}
 	}
+	logrus.Infof("Connection index %v", index)
+	var connIds []string
+	for _, v := range conn.GetPath().GetPathSegments(){
+		connIds = append(connIds, v.GetId())
+	}
+	logrus.Infof("Ids from path segments: %v", connIds)
 	if spiffeID, err := getSpiffeID(ctx); err == nil {
-		logrus.Infof("Get Spiffe id of the service in auth request %v", spiffeID)
+		connID := conn.GetPath().GetPathSegments()[index-1].GetId()
+		logrus.Infof("Put Spiffe id %v and conn id %v of the service in auth request", spiffeID, connID)
 		ids, _ := a.spiffeIDConnectionMap.Load(spiffeID)
-		a.spiffeIDConnectionMap.LoadOrStore(spiffeID, append(ids, conn.GetId()))
+		a.spiffeIDConnectionMap.LoadOrStore(
+			spiffeID, append(ids, connID))
 	}
 	logrus.Info("auth NS  pass policy check ")
 	return next.Server(ctx).Request(ctx, request)
