@@ -18,6 +18,8 @@ package authorize
 
 import (
 	"context"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Policy represents authorization policy for monitor connection.
@@ -29,6 +31,7 @@ type Policy interface {
 type policiesList []Policy
 
 func (l *policiesList) check(ctx context.Context, srv MonitorOpaInput) error {
+	logrus.Info("Monitor Auth check")
 	if l == nil {
 		return nil
 	}

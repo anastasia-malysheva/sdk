@@ -16,7 +16,11 @@
 
 package opa
 
-import _ "embed"
+import (
+	_ "embed"
+
+	"github.com/sirupsen/logrus"
+)
 
 //go:embed policies/tokens_valid.rego
 var tokensValidPolicySource string
@@ -82,6 +86,7 @@ func WithTokensExpiredPolicy() *AuthorizationPolicy {
 }
 
 func WithServiceOwnConnectionPolicy() *AuthorizationPolicy {
+	logrus.Info("WithServiceOwnConnectionPolicy")
 	return &AuthorizationPolicy{
 		policySource: tokensServiceConnectionPolicySource,
 		query:        "service_connection",
