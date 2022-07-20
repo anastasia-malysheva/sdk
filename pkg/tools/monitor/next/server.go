@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/sirupsen/logrus"
 
 	"github.com/networkservicemesh/sdk/pkg/tools/monitor/streamcontext"
 )
@@ -47,6 +48,7 @@ func NewWrappedMonitorConnectionServer(wrapper MonitorConnectionsServerWrapper, 
 
 // NewMonitorConnectionServer - chains together servers into a single networkservice.MonitorConnectionServer
 func NewMonitorConnectionServer(servers ...networkservice.MonitorConnectionServer) networkservice.MonitorConnectionServer {
+	logrus.Info("Create New monitor connections next server")
 	return NewWrappedMonitorConnectionServer(
 		func(server networkservice.MonitorConnectionServer) networkservice.MonitorConnectionServer {
 			return server
@@ -54,6 +56,7 @@ func NewMonitorConnectionServer(servers ...networkservice.MonitorConnectionServe
 }
 
 func (n *nextMonitorConnectionServer) MonitorConnections(in *networkservice.MonitorScopeSelector, srv networkservice.MonitorConnection_MonitorConnectionsServer) error {
+	logrus.Info("next server MonitorConnections")
 	server, ctx := n.getServerAndContext(srv.Context())
 	return server.MonitorConnections(in, streamcontext.MonitorConnectionMonitorConnectionsServer(ctx, srv))
 }

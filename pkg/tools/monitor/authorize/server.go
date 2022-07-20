@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/sirupsen/logrus"
 	"github.com/spiffe/go-spiffe/v2/spiffeid"
 	"github.com/spiffe/go-spiffe/v2/svid/x509svid"
 	"google.golang.org/grpc/peer"
@@ -37,6 +38,7 @@ type authorizeMonitorConnectionsServer struct {
 
 // NewMonitorConnectionServer - returns a new authorization networkservicemesh.MonitorConnectionServer
 func NewMonitorConnectionServer(opts ...Option) networkservice.MonitorConnectionServer {
+	logrus.Info("Create New monitor connections auth server")
 	o := &options{
 		policies:              policiesList{opa.WithServiceOwnConnectionPolicy()},
 		spiffeIDConnectionMap: &spire.SpiffeIDConnectionMap{},
@@ -59,6 +61,7 @@ type MonitorOpaInput struct {
 }
 
 func (a *authorizeMonitorConnectionsServer) MonitorConnections(in *networkservice.MonitorScopeSelector, srv networkservice.MonitorConnection_MonitorConnectionsServer) error {
+	logrus.Info("auth MonitorConnections")
 	ctx := srv.Context()
 	p, ok := peer.FromContext(ctx)
 	var cert *x509.Certificate
@@ -70,6 +73,7 @@ func (a *authorizeMonitorConnectionsServer) MonitorConnections(in *networkservic
 	if cert != nil {
 		spiffeID, _ = x509svid.IDFromCert(cert)
 	}
+	logrus.Infof("auth MonitorConnections service spiffe id %v", spiffeID)
 	simpleMap := make(map[string][]string)
 	a.spiffeIDConnectionMap.Range(
 		func(k string, v []string) bool {
@@ -77,7 +81,10 @@ func (a *authorizeMonitorConnectionsServer) MonitorConnections(in *networkservic
 			return true
 		},
 	)
-
+	if len(simpleMap) > 0 {
+		logrus.Info("auth MonitorConnections spiffe id map is filled")
+	}
+	
 	input = MonitorOpaInput{
 		ServiceSpiffeID:       spiffeID.String(),
 		SpiffeIDConnectionMap: simpleMap,

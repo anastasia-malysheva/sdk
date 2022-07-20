@@ -25,6 +25,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spiffe/go-spiffe/v2/svid/x509svid"
 	"google.golang.org/grpc/peer"
 
@@ -75,6 +76,7 @@ func (a *authorizeServer) Request(ctx context.Context, request *networkservice.N
 		}
 	}
 	if spiffeID, err := getSpiffeID(ctx); err == nil {
+		logrus.Infof("Get Spiffe id of the service in auth request %v", spiffeID)
 		ids, _ := a.spiffeIDConnectionMap.Load(spiffeID)
 		a.spiffeIDConnectionMap.LoadOrStore(spiffeID, append(ids, conn.GetId()))
 	}
@@ -88,6 +90,7 @@ func (a *authorizeServer) Close(ctx context.Context, conn *networkservice.Connec
 		PathSegments: conn.GetPath().GetPathSegments()[:index+1],
 	}
 	if spiffeID, err := getSpiffeID(ctx); err == nil {
+		logrus.Infof("Get Spiffe id of the service in auth close %v", spiffeID)
 		ids, _ := a.spiffeIDConnectionMap.Load(spiffeID)
 		a.spiffeIDConnectionMap.LoadOrStore(spiffeID, append(ids, conn.GetId()))
 	}

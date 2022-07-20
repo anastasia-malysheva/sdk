@@ -22,6 +22,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/networkservicemesh/api/pkg/api/networkservice"
+	"github.com/sirupsen/logrus"
 )
 
 type nextMonitorConnectionClient struct {
@@ -38,6 +39,7 @@ type MonitorConnectionClientChainer func(...networkservice.MonitorConnectionClie
 
 // NewWrappedMonitorConnectionClient chains together clients with wrapper wrapped around each one
 func NewWrappedMonitorConnectionClient(wrapper MonitorConnectionClientWrapper, clients ...networkservice.MonitorConnectionClient) networkservice.MonitorConnectionClient {
+	logrus.Info("Create New monitor connections next client")
 	rv := &nextMonitorConnectionClient{clients: make([]networkservice.MonitorConnectionClient, 0, len(clients))}
 	for _, c := range clients {
 		rv.clients = append(rv.clients, wrapper(c))
@@ -53,6 +55,7 @@ func NewMonitorConnectionClient(clients ...networkservice.MonitorConnectionClien
 }
 
 func (n *nextMonitorConnectionClient) MonitorConnections(ctx context.Context, in *networkservice.MonitorScopeSelector, opts ...grpc.CallOption) (networkservice.MonitorConnection_MonitorConnectionsClient, error) {
+	logrus.Info("next client MonitorConnections")
 	client, ctx := n.getClientAndContext(ctx)
 	return client.MonitorConnections(ctx, in, opts...)
 }

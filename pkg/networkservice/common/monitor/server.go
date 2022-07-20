@@ -26,6 +26,7 @@ import (
 	"github.com/edwarnicke/serialize"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 
 	"github.com/networkservicemesh/sdk/pkg/networkservice/common/clientconn"
 	"github.com/networkservicemesh/sdk/pkg/networkservice/utils/metadata"
@@ -54,6 +55,7 @@ type monitorServer struct {
 //                        networkservice.MonitorConnectionServer chain
 //             chainCtx - context for lifecycle management
 func NewServer(chainCtx context.Context, monitorServerPtr *networkservice.MonitorConnectionServer) networkservice.NetworkServiceServer {
+	logrus.Infof("Create new Monitor Server")
 	filters := make(map[string]*monitorFilter)
 	executor := serialize.Executor{}
 	connections := make(map[string]*networkservice.Connection)
