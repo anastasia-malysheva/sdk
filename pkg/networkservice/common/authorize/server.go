@@ -72,6 +72,7 @@ func (a *authorizeServer) Request(ctx context.Context, request *networkservice.N
 	}
 	if _, ok := peer.FromContext(ctx); ok {
 		if err := a.policies.check(ctx, leftSide); err != nil {
+			logrus.Info("auth NS  failed policy check ")
 			return nil, err
 		}
 	}
@@ -80,6 +81,7 @@ func (a *authorizeServer) Request(ctx context.Context, request *networkservice.N
 		ids, _ := a.spiffeIDConnectionMap.Load(spiffeID)
 		a.spiffeIDConnectionMap.LoadOrStore(spiffeID, append(ids, conn.GetId()))
 	}
+	logrus.Info("auth NS  pass policy check ")
 	return next.Server(ctx).Request(ctx, request)
 }
 
@@ -89,16 +91,20 @@ func (a *authorizeServer) Close(ctx context.Context, conn *networkservice.Connec
 		Index:        index,
 		PathSegments: conn.GetPath().GetPathSegments()[:index+1],
 	}
+
+	if _, ok := peer.FromContext(ctx); ok {
+		if err := a.policies.check(ctx, leftSide); err != nil {
+			logrus.Info("auth NS  failed policy check ")
+
+			return nil, err
+		}
+	}
 	if spiffeID, err := getSpiffeID(ctx); err == nil {
 		logrus.Infof("Get Spiffe id of the service in auth close %v", spiffeID)
 		ids, _ := a.spiffeIDConnectionMap.Load(spiffeID)
 		a.spiffeIDConnectionMap.LoadOrStore(spiffeID, append(ids, conn.GetId()))
 	}
-	if _, ok := peer.FromContext(ctx); ok {
-		if err := a.policies.check(ctx, leftSide); err != nil {
-			return nil, err
-		}
-	}
+	logrus.Info("auth NS  pass policy check ")
 	return next.Server(ctx).Close(ctx, conn)
 }
 

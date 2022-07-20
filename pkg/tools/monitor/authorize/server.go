@@ -73,7 +73,7 @@ func (a *authorizeMonitorConnectionsServer) MonitorConnections(in *networkservic
 	if cert != nil {
 		spiffeID, _ = x509svid.IDFromCert(cert)
 	}
-	logrus.Infof("auth MonitorConnections service spiffe id %v", spiffeID)
+	logrus.Infof("auth MonitorConnections service spiffe id %v", spiffeID.String())
 	simpleMap := make(map[string][]string)
 	a.spiffeIDConnectionMap.Range(
 		func(k string, v []string) bool {
@@ -90,10 +90,18 @@ func (a *authorizeMonitorConnectionsServer) MonitorConnections(in *networkservic
 		SpiffeIDConnectionMap: simpleMap,
 		PathSegments:          in.PathSegments,
 	}
-
+	for k, v := range simpleMap{
+		logrus.Infof("SpiffeID %v :: %v", k, v)
+	}
+	var seg []string
+	for _, v := range in.PathSegments{
+		seg = append(seg, v.GetId())
+	}
+	logrus.Infof("PathSegment %v", seg)
 	if err := a.policies.check(ctx, input); err != nil {
+		logrus.Infof("auth MonitorConnections service with spiffe id failed policy check %v", spiffeID.String())
 		return err
 	}
-
+	logrus.Infof("auth MonitorConnections service with spiffe id pass policy check %v", spiffeID)
 	return next.MonitorConnectionServer(ctx).MonitorConnections(in, srv)
 }
