@@ -101,12 +101,22 @@ func (a *authorizeServer) Request(ctx context.Context, request *networkservice.N
 				ids.Store(connID, true)
 			}
 		}
-		
 		logrus.Infof("After conn Ids %v", ids)
-		a.spiffeIDConnectionMap.Store(
-			spiffeID, ids)
+		a.spiffeIDConnectionMap.Store(spiffeID, ids)
 		logrus.Infof("After Spiffe Id map %v", a.spiffeIDConnectionMap)
 	}
+	a.spiffeIDConnectionMap.Range(
+		func(sid string , connMap spire.ConnectionMap) bool {
+			logrus.Infof("spiffeId %v", sid)
+			connMap.Range(
+				func(id string, ok bool) bool {
+					logrus.Infof("ConnId %v", id)
+					return true
+				},
+			)
+			return true
+		},
+	)
 	logrus.Info("auth NS  pass policy check ")
 	return next.Server(ctx).Request(ctx, request)
 }

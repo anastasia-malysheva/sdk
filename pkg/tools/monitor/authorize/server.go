@@ -73,14 +73,18 @@ func (a *authorizeMonitorConnectionsServer) MonitorConnections(in *networkservic
 	if cert != nil {
 		spiffeID, _ = x509svid.IDFromCert(cert)
 	}
-	logrus.Infof("auth MonitorConnections service spiffe id %v", spiffeID.String())
 	simpleMap := make(map[string][]string)
-
+	logrus.Infof("a.spiffeIDConnectionMap %v", &a.spiffeIDConnectionMap)
 	a.spiffeIDConnectionMap.Range(
 		func(sid string, connIds spire.ConnectionMap) bool {
+			logrus.Info("spiffeId Conn Map")
 			connIds.Range(
 				func(connId string, _ bool) bool {
-					simpleMap[sid] = append(simpleMap[sid], connId)
+					ids := simpleMap[sid]
+					logrus.Infof("before ConnIds %v", ids)
+					ids = append(ids, connId)
+					logrus.Infof("after ConnIds %v", ids)
+					simpleMap[sid] = ids
 					return true
 				},
 			)

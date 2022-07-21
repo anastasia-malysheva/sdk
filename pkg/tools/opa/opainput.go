@@ -23,6 +23,7 @@ import (
 	"encoding/pem"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/peer"
 
 	"google.golang.org/grpc/credentials"
@@ -46,6 +47,7 @@ func PreparedOpaInput(ctx context.Context, model interface{}) (map[string]interf
 	result["auth_info"] = map[string]interface{}{
 		"certificate": pemcert,
 	}
+	logrus.Infof("PreparedOpaInput", result)
 	return result, nil
 }
 
